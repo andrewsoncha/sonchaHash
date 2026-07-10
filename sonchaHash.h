@@ -6,7 +6,7 @@
 
 unsigned int hashStr(char* str, int divider, int primeN){
 	unsigned int N = strlen(str);
-	unsigned int val = 0;
+	unsigned int val = 67;
 	for(int i=0;i<N;i++){
 		val += primeN * val + str[i];
 		val %= divider;
@@ -72,7 +72,7 @@ SBucket* findSBucket(SBucket* currBucket, char* key){
 		return NULL;
 	}
 	SBucket* corrBucket; //Bucket corresponding to hash value
-	hashVal = hashStr(key, currBucket->subBucketN, primeNums[0]);
+	hashVal = hashStr(key, currBucket->subBucketN, primeNums[currBucket->depth]);
 	if(hashVal > currBucket->subBucketN){
 		printf("ERROR! findSBucket. hashVal bigger than bucketN!\n");
 	}
@@ -116,8 +116,8 @@ void splitSBucket(SBucket* bucket, int bucketN){
 	}
 
 	if(oldKey != NULL){
-		unsigned int hashVal = hashStr(oldKey, bucketN, primeNums[newDepth]);
-		SBucket* oldKeyBucket = &bucket->subBuckets[bucketN];
+		unsigned int hashVal = hashStr(oldKey, bucketN, primeNums[bucket->depth]);
+		SBucket* oldKeyBucket = &(bucket->subBuckets[hashVal]);
 		oldKeyBucket->key = oldKey;
 		oldKeyBucket->value = oldValue;
 	}
@@ -138,8 +138,8 @@ void insertStSBucket(SBucket* bucket, char* key, char* value, int splitBucketN){
 			char* oldKey = bucket->key;
 			char* oldValue = bucket->value;
 			if(strcmp(oldKey, key)==0){ // Replace old value with new
-				oldValue = realloc(oldValue, valueLen);
-				strcpy(oldValue, value);
+				bucket->value = realloc(bucket->value, valueLen);
+				strcpy(bucket->value, value);
 			}
 			else{ // Hash Collision
 			      splitSBucket(bucket, splitBucketN);
@@ -183,6 +183,30 @@ char* getStSHash(StSHash* ht, char* key){
 		return NULL;
 	}
 	return NULL;
+}
+
+void deleteStSHash(StSHash* ht, char* key){
+	SBucket* foundBucket;
+	foundBucket = findSBucket(ht->mainBucket, key);
+	if(foundBucket == NULL){
+		return;
+	}
+	
+	if(foundBucket->type == 0){
+		if(foundBucket->key == NULL){ // Key not found (no entry with same hashval)
+			return;
+		}
+		else if(strcmp(foundBucket->key, key) != 0){ // Key not found
+							     // (there is an entry with same hashval but the key itself is different)
+			return;
+		}
+		else{ // Key Found!
+		        free(foundBucket->key);
+			free(foundBucket->value);
+			foundBucket->key = NULL;
+			foundBucket->value = NULL;
+		}
+	}
 }
 
 void freeSBucketInternal(SBucket* bucket){
